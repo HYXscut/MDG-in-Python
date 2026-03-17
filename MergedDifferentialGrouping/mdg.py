@@ -26,20 +26,21 @@ class MDG:
         FEs = 0
         perturbed_values = []
 
-        p1 = base * np.ones(dim)
+        p1 = np.full(dim, base)
         fp1 = self.fun.compute(p1)
-        p4 = (base + sigma) * np.ones(dim)
+        p4 = p1 + sigma
         fp4 = self.fun.compute(p4)
 
         FEs += 2
+        perturbed_values = np.zeros(dim)
 
         for i in range(0, dim):
             p2 = p1.copy()
-            p2[i] = base + sigma
+            p2[i] += sigma
             fp2 = self.fun.compute(p2)
 
             p3 = p4.copy()
-            p3[i] = base
+            p3[i] -= sigma
             fp3 = self.fun.compute(p3)
 
             FEs += 2
@@ -47,7 +48,7 @@ class MDG:
             delta1 = fp2 - fp1
             delta2 = fp4 - fp3
             # 将只扰动变量i的函数值存在perturbed_value中，提高运行效率
-            perturbed_values.append(fp2)
+            perturbed_values[i] = fp2[0]
             # 如果变量 i 与其他变量没有交互作用，那么无论其他变量处于什么值，变量 i 对函数值的影响应该是恒定的。
             epsilon = epsilonCalculate(fp1, fp2, fp3, fp4, dim)
             if abs(delta1 - delta2) < epsilon:
@@ -56,14 +57,16 @@ class MDG:
                 dims.append(i + 1)
 
         if len(dims) > 1:
-            groups, _, FE = mergeGroup(self.fun, self.info, dims, fp1, perturbed_values)
+            groups, _, FE = mergeGroup(
+                self.fun, self.info, np.array(dims), fp1, perturbed_values
+            )
             FEs += FE
             # 初步判断的不可分变量中可能仍存在可分变量，通过判断分好组的不可分变量中是否有只包含一个变量的组，来避免漏检
-            for i in range(len(groups) - 1, -1, -1):
-                if len(groups[i]) == 1:
-                    seps.append(groups[i])
-                    del groups[i]
-            allgroups = groups.copy()
+
+            allgroups = [g for g in groups if len(g) > 1]
+            new_seps = [g[0] for g in groups if len(g) == 1]
+            seps.extend(new_seps)
+
         subspaces = {"nonseps": allgroups, "seps": seps}
         return subspaces
 
@@ -71,34 +74,41 @@ class MDG:
 def mergeInteractionGroup(LgroupIndexs, Rinteract_Indexs, Lgroups, Rgroups):
     merged_groups = []
     cur_Leftgroup = []
+    LgroupIndexs = list(LgroupIndexs)
+    Rinteract_Indexs = list(Rinteract_Indexs)
 
     while LgroupIndexs:
         cur_Rightgroup = []
         cur_index = LgroupIndexs[0]
-        cur_interact_indexs = Rinteract_Indexs[0]
-        Rightgroup_index = Rinteract_Indexs[0]
+        cur_interact_indexs = list(Rinteract_Indexs[0])
+        Rightgroup_index = list(Rinteract_Indexs[0])
 
-        cur_Leftgroup = Lgroups[cur_index].copy()
-        cur_Leftlen = len(LgroupIndexs)
+        left_item = Lgroups[cur_index]
+        cur_Leftgroup = left_item.tolist() if isinstance(left_item, np.ndarray) else list(left_item)
 
         del LgroupIndexs[0]
         del Rinteract_Indexs[0]
+        
         i = 0
-        while i + 1 < cur_Leftlen:
+        while i < len(LgroupIndexs):
             if set(cur_interact_indexs) & set(Rinteract_Indexs[i]):
-                cur_Leftgroup = cur_Leftgroup + Lgroups[LgroupIndexs[i]]
+                next_left = Lgroups[LgroupIndexs[i]]
+                next_left_list = next_left.tolist() if isinstance(next_left, np.ndarray) else list(next_left)
+                cur_Leftgroup.extend(next_left_list)
 
-                Rightgroup_index = list(
-                    set(Rightgroup_index) | set(Rinteract_Indexs[i])
-                )
+                Rightgroup_index = list(set(Rightgroup_index) | set(Rinteract_Indexs[i]))
                 del LgroupIndexs[i]
-                cur_Leftlen -= 1
                 del Rinteract_Indexs[i]
             else:
                 i += 1
+        
         for j in Rightgroup_index:
-            cur_Rightgroup = cur_Rightgroup + Rgroups[j]
+            right_item = Rgroups[j]
+            right_item_list = right_item.tolist() if isinstance(right_item, np.ndarray) else list(right_item)
+            cur_Rightgroup.extend(right_item_list)
+        
         merged_groups.append(cur_Leftgroup + cur_Rightgroup)
+        
     return merged_groups
 
 
@@ -110,34 +120,26 @@ def bisearch(fun, info, left_group, fp1, fp2, fp_iR, Rgroups, Rperts_cache):
     sigma = (ub - lb) / 4
     FEs = 0
     R_gnum = len(Rgroups)
-    Rperts = [0] * (2 * dim)
+    Rperts = [0] * (4 * dim)
     Rperts[0] = Rperts_cache
     Rfp = Rperts[0]
-    groupsQueue = []
-    dataQueue = []
-    groupIndexsQueue = []
-    pQueue = []
 
     data = [fp1, fp2, Rfp, fp_iR]
     groupsQueue = [Rgroups]
-    dataQueue.append(data.copy())
-    groupIndexsQueue.append(list(range(0, R_gnum)))
-    pQueue.append(base * np.ones(dim))
+    dataQueue = [data.copy()]
+    groupIndexsQueue = [list(range(0, R_gnum))]
+    pQueue = [np.full(dim, base)]
     node_orders = [1]
     group = []
     groupIndexs = []
 
     while groupsQueue:
-        cur_groups = groupsQueue[0]
-        cur_data = dataQueue[0]
-        cur_groupIndexs = groupIndexsQueue[0]
-        cur_p = pQueue[0]
-        cur_order = node_orders[0]
-        del groupsQueue[0]
-        del dataQueue[0]
-        del pQueue[0]
-        del groupIndexsQueue[0]
-        del node_orders[0]
+        cur_groups = groupsQueue.pop(0)
+        cur_data = dataQueue.pop(0)
+        cur_groupIndexs = groupIndexsQueue.pop(0)
+        cur_p = pQueue.pop(0)
+        cur_order = node_orders.pop(0)
+
         delta1 = cur_data[1] - cur_data[0]
         delta2 = cur_data[3] - cur_data[2]
         epsilon = epsilonCalculate(
@@ -154,9 +156,9 @@ def bisearch(fun, info, left_group, fp1, fp2, fp_iR, Rgroups, Rperts_cache):
                 groups1 = cur_groups[0:median]
                 groupIndexs1 = cur_groupIndexs[0:median]
                 p_1 = cur_p.copy()
-                for g in groups1:
-                    for i in g:
-                        p_1[i - 1] = base + sigma
+
+                p_1[[i - 1 for g in groups1 for i in g]] = base + sigma
+
                 if cur_order * 2 <= len(Rperts) and Rperts[cur_order * 2 - 1] != 0:
                     fp_1 = Rperts[cur_order * 2 - 1]
                 else:
@@ -164,7 +166,7 @@ def bisearch(fun, info, left_group, fp1, fp2, fp_iR, Rgroups, Rperts_cache):
                     Rperts[cur_order * 2 - 1] = fp_1
                     FEs += 1
                 p_i1 = p_1.copy()
-                p_i1[[i - 1 for i in left_group]] = base + sigma
+                p_i1[np.array(left_group) - 1] = base + sigma
                 fp_i1 = fun.compute(p_i1)
                 FEs += 1
 
@@ -198,11 +200,11 @@ def mergeGroup(fun, info, dims, fp1, perturbed_values):
 
     if dim_len == 1 or dim_len == 2:
         if dim_len == 1:
-            groups_perturb = perturbed_values[dims[0] - 1].copy()
-            groups.append(dims.copy())
+            groups_perturb = perturbed_values[int(dims[0]) - 1].copy()
+            groups.append(dims.tolist())
         else:
-            p = base * np.ones(dim)
-            p[[i - 1 for i in dims]] = base + sigma
+            p = np.full(dim, base)
+            p[dims - 1] = base + sigma
             fp = fun.compute(p)
             FEs += 1
 
@@ -218,13 +220,14 @@ def mergeGroup(fun, info, dims, fp1, perturbed_values):
                 dim,
             )
 
-            groups_perturb = fp.copy()
+            groups_perturb = fp
             if abs(delta1 - delta2) < epsilon:
                 groups.append([dims[0]])
                 groups.append([dims[1]])
             else:
-                groups = [dims.copy()]
+                groups = [dims.tolist()]
         return groups, groups_perturb, FEs
+
     median = dim_len // 2
     Ldims = dims[0:median]
     Rdims = dims[median:dim_len]
@@ -240,7 +243,7 @@ def mergeGroup(fun, info, dims, fp1, perturbed_values):
     Rfp = Rgroups_perturb
 
     p = base * np.ones(dim)
-    p[[i - 1 for i in dims]] = base + sigma
+    p[dims - 1] = base + sigma
     fp = fun.compute(p)
     FEs += 1
 
@@ -279,11 +282,11 @@ def mergeGroup(fun, info, dims, fp1, perturbed_values):
                     fp_iR = fp
                 else:
                     p_i = base * np.ones(dim)
-                    p_i[[k - 1 for k in Lgroup[i]]] = base + sigma
+                    p_i[np.array(Lgroup[i]) - 1] = base + sigma
                     fp_i = fun.compute(p_i)
-                    p_iR = p_i
+                    p_iR = p_i.copy()
                     # iR=Lgroup[i]+Rdims(改进：只需给右组加扰动)
-                    p_iR[[i - 1 for i in Rdims]] = base + sigma
+                    p_iR[[r - 1 for r in Rdims]] = base + sigma
                     fp_iR = fun.compute(p_iR)
                     FEs += 2
 
