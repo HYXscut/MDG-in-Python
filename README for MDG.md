@@ -1,83 +1,80 @@
-# MDG(Merged Differential Grouping)
+# MDG (Merged Differential Grouping)
 
+As an optimized variable grouping method, **MDG** is equipped with the following key features:
 
-As an optimized variable grouping method, MDG is equiped with the following key features:
-- **1. High effiency:** 
-The computational complexity of MDG is $O\left(max\left\{n, n_{ns}\times\log_2 k\right\}\right)$, which is lower than the best complexity $O\left(n\log_2n\right)$ among FII, RDG, RDG2, and ERDG.
-- **2. High grouping accuracy:**
-Firstly, MDG detects the subset-subset interaction ,rather than traditional variable-variable interction, which helps focusing on overall variables' interaction. Secondly, MDG employs adaptive threshold in order to better evaluate the interction of each variable sebsets. Last but not least, MDG adopts a binary-tree-based merging approach and calculations in each layer are independent, which avoids misjudgements caused by the accumulation of noises such as floating-point errors.
-- **3. Parameter-free**
+### Key Features
+* **1. High Efficiency:** The computational complexity of MDG is $O\left(\max\left\{n, n_{ns}\times\log_2 k\right\}\right)$, which is lower than the best complexity $O\left(n\log_2n\right)$ among FII, RDG, RDG2, and ERDG.
+* **2. High Grouping Accuracy:** 
+    * **Subset-Subset Interaction:** MDG detects the subset-subset interaction, rather than traditional variable-variable interaction, which helps focusing on overall variables' interaction.
+    * **Adaptive Threshold:** MDG employs an adaptive threshold in order to better evaluate the interaction of each variable subset.
+    * **Binary-Tree-Based Merging:** MDG adopts a binary-tree-based merging approach where calculations in each layer are independent, avoiding misjudgements caused by the accumulation of noises such as floating-point errors.
+* **3. Parameter-free**
 
-The grouping process in MDG can be divided into two stages. In stage 1, MDG identifies each variable as either seperable ot nonseperable variable. In stage 2, the nonseperable variables are assigned into different groups, based on the subset-subset interaction and a binary-tree-based iterative merging method.
+---
 
-The main procedure of MDG is as follows:
+## Grouping Process
+The grouping process in MDG can be divided into two stages:
+1.  **Stage 1:** MDG identifies each variable as either a **separable** or **nonseparable** variable.
+2.  **Stage 2:** The nonseparable variables are assigned into different groups based on the subset-subset interaction and a binary-tree-based iterative merging method.
+
+### Main Procedure
 <p align="center">
-  <img src="MDG1.jpg" alt="Your Image Description" width="300">
-</p>
-<p align="center">
-  <img src="algorithm1.png" alt="Your Image Description" width="300">
+  <img src="MDG1.jpg" alt="MDG Main Procedure" width="500">
+  <img src="algorithm1.png" alt="Algorithm 1" width="400">
 </p>
 
-## The main improvement ideas of MDG
+---
+
+## The Main Improvement Ideas of MDG
 
 ### Binary-Tree-Based Iterative Merging
-Binary-Tree-Based Iterative Merging is a divide-and-conquer grouping strategy used in MDG to efficiently spare nonseparable variables. Its core idea is to put variables into a binary tree and merge them level by level, detecting interactions only between subsets in the same level. This hierarchical merging design brings several key advantages:
-1. **Dramatically reduced computational complexity**
-- Instead of checking all variable pairs ($O(n)$, like DG), the binary?tree structure  only needs $O(n log_2n)$ interaction checks.
-- Each level halves the number of nodes, so the consumption of computing resources is decreasing.
-2. **Capture both direct and indirect interactions**
-- When two interacting subsets merge at a lower level, the merged subset propagates upward. This allows MDG to automatically detect indirect multi-variable interactions, which classical DG often could not capture.
+Binary-Tree-Based Iterative Merging is a divide-and-conquer grouping strategy used in MDG to efficiently spare nonseparable variables. Its core idea is to put variables into a binary tree and merge them level by level, detecting interactions only between subsets in the same level.
 
-Binary-Tree-Based Iterative Merging works like this£º
+#### Key Advantages:
+* **Dramatically reduced computational complexity:** Instead of checking all variable pairs ($O(n^2)$ like DG), the binary-tree structure only needs $O(n \log_2 n)$ interaction checks.
+* **Resource Efficiency:** Each level halves the number of nodes, so the consumption of computing resources is decreasing.
+* **Capture both direct and indirect interactions:** When two interacting subsets merge at a lower level, the merged subset propagates upward, allowing MDG to detect indirect multi-variable interactions.
+
+#### Merging Mechanism:
 <p align="center">
-  <img src="MDG2.jpg" alt="Your Image Description" width="300">
-</p>
-<p align="center">
-  <img src="algorithm2.png" alt="Your Image Description" width="300">
+  <img src="MDG2.jpg" alt="MDG Merging" width="500">
+  <img src="algorithm2.png" alt="Algorithm 2" width="400">
 </p>
 
-We could also take a simple function as example:
+**Simple Function Example:**
 <p align="center">
-  <img src="binary-tree.jpeg" alt="Your Image Description" width="700">
+  <img src="binary-tree.jpeg" alt="Binary Tree Example" width="800">
 </p>
 
-
-
-
+---
 
 ### Binary Search
-Binary search serves as a core efficient mechanism to detect subset¨Csubset variable interactions in MDG. It recursively splits a candidate variable subset into two equal halves, checks for interactions between the target subset and each half using MDG's adaptive threshold, and reuses historical fitness evaluation information to minimize computational cost. This process narrows down interactive sub-subsets exponentially, enabling accurate and efficient variable grouping while reducing the number of fitness evaluations per interaction check, thus enhancing MDG's overall decomposition efficiency for LSGO.
+Binary search serves as a core efficient mechanism to detect subset–subset variable interactions in MDG. It recursively splits a candidate variable subset into two equal halves, checks for interactions using MDG's adaptive threshold, and reuses historical fitness evaluation information.
 
-The procedure of Binary Search is as follows:
+#### Binary Search Procedure:
 <p align="center">
-  <img src="MDG3.jpg" alt="Your Image Description" width="500">
-</p>
-<p align="center">
-  <img src="algorithm3.png" alt="Your Image Description" width="300">
+  <img src="MDG3.jpg" alt="MDG Binary Search" width="700">
+  <img src="algorithm3.png" alt="Algorithm 3" width="400">
 </p>
 
-Here is an example of Binary Search to check the interaction between $X_1$ and $X_2$
+**Interaction check between $X_1$ and $X_2$:**
 <p align="center">
-  <img src="binary-search.jpeg" alt="Your Image Description" width="500">
+  <img src="binary-search.jpeg" alt="Binary Search Example" width="800">
 </p>
 
-### Historical evaluation information reuse
-MDG stores historical perturbed values when a variable or a variable set is first perturbed. 
-When MDG is checking new interactions that need to evaluate the same perturbation values, it reuses the stored values instead of calculation again. This helps save a lot of computing resources.
+---
 
+### Historical Evaluation Information Reuse
+MDG stores historical perturbed values when a variable or a variable set is first perturbed. When checking new interactions that need the same perturbation values, it reuses the stored values instead of calculating again to save computing resources.
 
-### Adaptive threshold
-MDG introduces an adaptive threshold based on multiple fitness values, the number of variables and the rounding error of floating numbers, in order to better evaluate the interaction of each pair of varible subsets.
+### Adaptive Threshold
+MDG introduces an adaptive threshold based on multiple fitness values, the number of variables, and the rounding error of floating numbers.
 
-The calculation method of $\epsilon$ is as follows:
+The calculation method of $\epsilon$ is:
 $$\epsilon = c \times 2^{-52} \times F_{max} \times dim$$
 
-Where:
-
-$F_{\max} = \max\{f_1, f_2, f_3, f_4\}$
-
-$c = 0.003$ (a prespecified parameter)
-
-$2^{-52}$ (Floating-point error)
-
-$dim$ is the problem dimensionality.
+**Where:**
+* $F_{\max} = \max\{f_1, f_2, f_3, f_4\}$
+* $c = 0.003$ (a prespecified parameter)
+* $2^{-52}$ (Floating-point error)
+* $dim$ is the problem dimensionality
