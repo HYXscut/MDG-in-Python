@@ -3,7 +3,7 @@
 As an optimized variable grouping method, **MDG** is equipped with the following key features:
 
 ### Key Features
-* **1. High Efficiency:** The computational complexity of MDG is $O\left(\max\left\{n, n_{ns}\times\log_2 k\right\}\right)$, which is lower than the best complexity $O\left(n\log_2n\right)$ among FII, RDG, RDG2, and ERDG.
+* **1. High Efficiency:** The computational complexity of MDG is $O(\max\{n, n_{ns}\times\log_2 k\})$, which is lower than the best complexity $O\left(n\log_2n\right)$ among FII, RDG, RDG2, and ERDG.
 * **2. High Grouping Accuracy:** 
     * **Subset-Subset Interaction:** MDG detects the subset-subset interaction, rather than traditional variable-variable interaction, which helps focusing on overall variables' interaction.
     * **Adaptive Threshold:** MDG employs an adaptive threshold in order to better evaluate the interaction of each variable subset.
@@ -43,13 +43,13 @@ Binary-Tree-Based Iterative Merging is a divide-and-conquer grouping strategy us
 
 **Simple Function Example:**
 <p align="center">
-  <img src="binary-tree.jpeg" alt="Binary Tree Example" width="800">
+  <img src="Binary-tree.jpeg" alt="Binary Tree Example" width="800">
 </p>
 
 ---
 
 ### Binary Search
-Binary search serves as a core efficient mechanism to detect subset–subset variable interactions in MDG. It recursively splits a candidate variable subset into two equal halves, checks for interactions using MDG's adaptive threshold, and reuses historical fitness evaluation information.
+Binary search serves as a core efficient mechanism to detect subsetâ€“subset variable interactions in MDG. It recursively splits a candidate variable subset into two equal halves, checks for interactions using MDG's adaptive threshold, and reuses historical fitness evaluation information.
 
 #### Binary Search Procedure:
 <p align="center">
@@ -59,7 +59,7 @@ Binary search serves as a core efficient mechanism to detect subset–subset varia
 
 **Interaction check between $X_1$ and $X_2$:**
 <p align="center">
-  <img src="binary-search.jpeg" alt="Binary Search Example" width="800">
+  <img src="Binary-Search.jpeg" alt="Binary Search Example" width="800">
 </p>
 
 ---
